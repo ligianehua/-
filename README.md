@@ -4,21 +4,23 @@
 标题、描述、参数表、图文（инфографика）文案、视频脚本、分层关键词、标签，外加合规检查和字数校验。
 
 ```
-输入：产品名称 + 图片 + 视频 + 参数 + 介绍
-  ↓  Step 0  归一化（单位、尺码、品牌保留拉丁）
-  ↓  Step 1  看图看视频，提取可见卖点
-  ↓  Step 2  俄语卡片（三平台标题 / 描述 / 参数 / 属性映射 / 图文 / FAQ）
-  ↓  Step 3  关键词 ВЧ / СЧ / НЧ + 反向词 + #标签
-  ↓  Step 4  合规：ТР ТС / ЕАС、Честный ЗНАК、俄语标签、广告法红线
+输入：产品名称 + 图片 + 视频 + 参数 + 介绍 + 销售模式
+  ↓  Step 0  事实档案（值 / 来源 / 状态）+ 归一化 + 变体
+  ↓  Step 1  看图看视频，提取可见卖点，交叉核对
+  ↓  Step 2  关键词计划 ВЧ / СЧ / НЧ（在文案之前）
+  ↓  Step 3  俄语卡片（三平台标题 / 描述 / 参数 / 属性映射 / 图文 / FAQ / 中文对照）
+  ↓  Step 4  合规：ТР ТС / ЕАС、Честный ЗНАК、俄语标签、无依据宣传隔离、门禁三态
   ↓  Step 5  scripts/validate_card.py 校验
-输出：output.json（templates/output.schema.json）+ Markdown 卡片
+输出：output.json（templates/output.schema.json）+ 中俄对照 Markdown + 供应商补资料信息
 ```
+
+一条纪律：**一个商品一份事实，多套表达，分别适配平台。** 事实档案里没有的，卡片里不许有。
 
 ## 安装
 
 ### Codex CLI
 
-仓库级（推荐，随项目走）：本仓库已经放在 `.codex/skills/ru-ecom-product/`，在仓库根目录启动 Codex 即可被发现。
+仓库级（推荐，随项目走）：Skill 在 `.codex/skills/ru-ecom-product/`，`.agents/skills/` 有同一目录的软链接。两个路径都能被发现，在仓库根目录启动 Codex 即可。
 
 用户级（所有项目可用）：
 
@@ -75,7 +77,8 @@ AGENTS.md                    # Codex 仓库级约定
 
 ## 现在的边界（别自欺）
 
-- **关键词没有搜索量数据。** 没接 Wordstat / WB / Ozon 后台之前，关键词是语言学估计，`keywords.source` 会标 `llm-estimate`。
+- **关键词没有搜索量数据。** 没接 Wordstat / WB / Ozon 后台之前，关键词是候选词（`status: candidate`），`keywords.source` 会标 `llm-estimate`。
+- **首版只生成和导出，不自动发布。** 平台 API 密钥只从环境变量读，不进仓库。
 - **合规是清单，不是法律意见。** 证书类型和 Честный ЗНАК 范围要认证机构确认。
 - **平台字数限制会变。** 常量在 `references/marketplaces.md` 与 `scripts/validate_card.py` 两处，改一处记得改另一处。
 

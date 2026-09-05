@@ -2,21 +2,61 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ru-ecom-product/output.schema.json",
   "title": "Russian marketplace product card",
+  "description": "One product = one set of facts (facts[]), many expressions (ru.*), each adapted to platform rules. Everything in ru.*, keywords.*, infographic and video must be traceable to a fact with status confirmed or unverified; never to one with status missing or conflict.",
   "type": "object",
-  "required": ["source", "ru", "keywords", "compliance", "qa"],
+  "required": ["source", "facts", "ru", "keywords", "compliance", "qa"],
   "properties": {
     "source": {
       "type": "object",
-      "required": ["name_original"],
+      "required": ["name_original", "sales_mode"],
       "properties": {
         "name_original": { "type": "string" },
         "brand": { "type": ["string", "null"] },
         "model": { "type": ["string", "null"] },
-        "sku": { "type": ["string", "null"] },
+        "sku": { "type": ["string", "null"], "description": "Seller SKU of THIS card. For a variant family this is the parent; each variant carries its own sku in variants[]" },
         "language": { "type": "string", "enum": ["zh", "en", "other"] },
-        "images": { "type": "array", "items": { "type": "object", "properties": { "ref": { "type": "string" }, "observed": { "type": "string" } }, "required": ["ref"] } },
+        "sales_mode": {
+          "type": "string",
+          "enum": ["cross_border_direct", "local_fbo", "local_fbs", "local_dbs"],
+          "description": "cross_border_direct = shipped from China per order (Ozon Global / WB cross-border); local_fbo = stock in marketplace warehouse in RU; local_fbs = seller warehouse in RU; local_dbs = seller delivers. Fees, importer-of-record and label requirements differ."
+        },
+        "category_hint": { "type": ["string", "null"] },
+        "images": { "type": "array", "items": { "type": "object", "required": ["ref"], "properties": { "ref": { "type": "string" }, "observed": { "type": "string" }, "variant_sku": { "type": ["string", "null"], "description": "Which variant this image shows; null = shared" } } } },
         "video": { "type": ["object", "null"], "properties": { "ref": { "type": "string" }, "duration_s": { "type": "number" } } },
-        "target_marketplaces": { "type": "array", "items": { "type": "string", "enum": ["ozon", "wildberries", "yandex_market", "aliexpress"] } }
+        "target_marketplaces": { "type": "array", "items": { "type": "string", "enum": ["ozon", "wildberries", "yandex_market", "aliexpress"] } },
+        "variants": {
+          "type": "array",
+          "description": "Colour / size / capacity / bundle variants. Each has its own sku; attrs must differ in at least one key. Images and specs must not leak across variants.",
+          "items": {
+            "type": "object",
+            "required": ["sku", "attrs"],
+            "properties": {
+              "sku": { "type": "string" },
+              "attrs": { "type": "object", "additionalProperties": { "type": "string" }, "description": "e.g. {\"Цвет\": \"белый\"} or {\"Ёмкость\": \"20000 мАч\"}" },
+              "image_refs": { "type": "array", "items": { "type": "string" } },
+              "barcode": { "type": ["string", "null"] },
+              "price_rub": { "type": ["number", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "facts": {
+      "type": "array",
+      "description": "Product fact file. One entry per key parameter. Copy, keywords and media all cite these; nothing downstream may state a value that is not here.",
+      "items": {
+        "type": "object",
+        "required": ["key", "value", "source", "status"],
+        "properties": {
+          "key": { "type": "string", "description": "Russian attribute name as used in specs (e.g. Ёмкость)" },
+          "key_zh": { "type": ["string", "null"] },
+          "value": { "type": ["string", "null"], "description": "Normalised value (metric, comma decimal). null when status = missing" },
+          "unit": { "type": ["string", "null"] },
+          "source": { "type": "string", "description": "Where it came from: 'spec sheet', 'img_03', 'video 0:07', 'user message', 'inferred from category'. Never empty." },
+          "status": { "type": "string", "enum": ["confirmed", "unverified", "conflict", "missing"] },
+          "conflict_with": { "type": ["string", "null"], "description": "When status = conflict: the other value and its source, e.g. '450 мл (img_02)'" },
+          "note": { "type": ["string", "null"] }
+        }
       }
     },
     "ru": {
@@ -32,15 +72,18 @@
             "aliexpress": { "type": "string", "maxLength": 128 }
           }
         },
+        "title_zh": { "type": ["string", "null"], "description": "Chinese gloss of the Ozon title for reviewer" },
         "description": { "type": "string", "maxLength": 6000 },
+        "description_zh": { "type": ["string", "null"], "description": "Chinese gloss of description, paragraph-aligned, for bilingual review" },
         "description_wb": { "type": "string", "maxLength": 2000, "description": "Optional shortened version for Wildberries; if absent, description must itself be ≤ 2000" },
         "bullets": { "type": "array", "minItems": 3, "maxItems": 8, "items": { "type": "string", "maxLength": 80 } },
+        "bullets_zh": { "type": "array", "items": { "type": "string" } },
         "specs": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["name", "value"],
-            "properties": { "name": { "type": "string" }, "value": { "type": "string" }, "unit": { "type": ["string", "null"] } }
+            "properties": { "name": { "type": "string" }, "value": { "type": "string" }, "unit": { "type": ["string", "null"] }, "fact_key": { "type": ["string", "null"], "description": "facts[].key this row cites" } }
           }
         },
         "attributes": {
@@ -61,7 +104,9 @@
               "slide": { "type": "integer" },
               "headline": { "type": "string", "maxLength": 40 },
               "subline": { "type": "string", "maxLength": 90 },
-              "image_ref": { "type": ["string", "null"] }
+              "headline_zh": { "type": ["string", "null"] },
+              "image_ref": { "type": ["string", "null"] },
+              "route": { "type": "string", "enum": ["faithful", "creative"], "default": "faithful", "description": "faithful = real product cutout + template text; creative = generated scene (must be checked for product fidelity)" }
             }
           }
         },
@@ -72,46 +117,75 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "properties": { "time": { "type": "string" }, "visual": { "type": "string" }, "voiceover": { "type": "string" } }
+                "properties": { "time": { "type": "string" }, "visual": { "type": "string" }, "voiceover": { "type": "string" }, "voiceover_zh": { "type": ["string", "null"] } }
               }
             },
-            "subtitles_srt": { "type": "string" }
+            "subtitles_srt": { "type": "string" },
+            "rendered_file": { "type": ["string", "null"], "description": "Path of an actually produced MP4. null = not produced; a script is not a video." }
           }
         },
-        "faq": { "type": "array", "items": { "type": "object", "required": ["q", "a"], "properties": { "q": { "type": "string" }, "a": { "type": "string" } } } }
+        "faq": { "type": "array", "items": { "type": "object", "required": ["q", "a"], "properties": { "q": { "type": "string" }, "a": { "type": "string" }, "q_zh": { "type": ["string", "null"] }, "a_zh": { "type": ["string", "null"] } } } }
       }
     },
     "keywords": {
       "type": "object",
       "required": ["high", "mid", "low", "source"],
       "properties": {
-        "high": { "type": "array", "items": { "type": "string" } },
-        "mid": { "type": "array", "items": { "type": "string" } },
-        "low": { "type": "array", "items": { "type": "string" } },
+        "high": { "type": "array", "items": { "$ref": "#/$defs/keyword" } },
+        "mid": { "type": "array", "items": { "$ref": "#/$defs/keyword" } },
+        "low": { "type": "array", "items": { "$ref": "#/$defs/keyword" } },
         "negative": { "type": "array", "items": { "type": "object", "required": ["word", "reason"], "properties": { "word": { "type": "string" }, "reason": { "type": "string" } } } },
-        "hashtags": { "type": "array", "maxItems": 10, "items": { "type": "string", "pattern": "^#[a-zа-яё0-9_]+$" } },
-        "source": { "type": "string", "description": "\"llm-estimate\" or the name of the real search-data source" }
+        "hashtags": { "type": "array", "maxItems": 10, "items": { "type": "string", "pattern": "^#[a-zа-яё0-9_]+$" }, "description": "Ozon description hashtags only. WB has no buyer-facing hashtags." },
+        "internal_tags": { "type": "array", "items": { "type": "string" }, "description": "Seller back-office tags (WB Content API `tags`, Ozon internal). Not SEO. e.g. supplier, batch, review-status." },
+        "source": { "type": "string", "description": "\"llm-estimate\" or the name(s) of the real search-data source(s)" },
+        "collected_at": { "type": ["string", "null"], "description": "ISO date when search data was pulled; null for llm-estimate" }
       }
     },
     "compliance": {
       "type": "object",
-      "required": ["category_guess", "tr_ts", "chestny_znak", "label_text", "warnings"],
+      "required": ["category_guess", "gate", "tr_ts", "chestny_znak", "label_text", "warnings"],
       "properties": {
         "category_guess": { "type": "string" },
+        "gate": {
+          "type": "string",
+          "enum": ["proceed", "needs_materials", "blocked"],
+          "description": "proceed = nothing blocks producing the card (not a sales-compliance approval); needs_materials = draft allowed, clearly marked, until listed materials arrive; blocked = unresolved blocker, must not go to publish step"
+        },
+        "gate_reason": { "type": ["string", "null"] },
         "tr_ts": { "type": "array", "items": { "type": "string" } },
         "chestny_znak": { "type": ["boolean", "string"] },
         "fsb_notification": { "type": ["boolean", "null"] },
         "age_marking": { "type": ["string", "null"] },
         "label_text": { "type": "string" },
-        "warnings": { "type": "array", "items": { "type": "string" } }
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "claims_to_review": { "type": "array", "items": { "type": "string" }, "description": "Marketing claims in the source that have no fact behind them (антибактериальный, IP67, лечит...). Kept out of the card until evidenced." }
       }
     },
     "qa": {
       "type": "object",
       "properties": {
         "missing_fields": { "type": "array", "items": { "type": "string" } },
+        "conflicts": { "type": "array", "items": { "type": "string" }, "description": "Human-readable list of facts[] with status conflict" },
         "assumptions": { "type": "array", "items": { "type": "string" } },
-        "validator": { "type": ["object", "null"] }
+        "supplier_request_zh": { "type": ["string", "null"], "description": "Ready-to-forward Chinese message asking the supplier for missing / conflicting data" },
+        "validator": { "type": ["object", "null"] },
+        "version": { "type": ["string", "null"], "description": "e.g. 2026-09-05-r2. Bump on every regeneration; keep human edits listed in manual_edits" },
+        "manual_edits": { "type": "array", "items": { "type": "string" }, "description": "Fields a human changed after generation. A re-run must not overwrite these." }
+      }
+    }
+  },
+  "$defs": {
+    "keyword": {
+      "type": "object",
+      "required": ["ru", "use", "status"],
+      "properties": {
+        "ru": { "type": "string" },
+        "zh": { "type": ["string", "null"], "description": "Chinese gloss for reviewer" },
+        "use": { "type": "array", "items": { "type": "string", "enum": ["title", "description", "attributes", "infographic", "faq", "hashtag", "ads"] } },
+        "sku": { "type": ["string", "null"], "description": "Variant this keyword applies to; null = all" },
+        "status": { "type": "string", "enum": ["verified", "candidate", "not_applicable"], "description": "verified = seen in real search data; candidate = model-proposed, no data" },
+        "volume": { "type": ["number", "null"], "description": "Only when status = verified" },
+        "source": { "type": ["string", "null"] }
       }
     }
   }
