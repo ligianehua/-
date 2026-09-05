@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ru-ecom-product/output.schema.json",
+  "title": "Russian marketplace product card",
+  "type": "object",
+  "required": ["source", "ru", "keywords", "compliance", "qa"],
+  "properties": {
+    "source": {
+      "type": "object",
+      "required": ["name_original"],
+      "properties": {
+        "name_original": { "type": "string" },
+        "brand": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "sku": { "type": ["string", "null"] },
+        "language": { "type": "string", "enum": ["zh", "en", "other"] },
+        "images": { "type": "array", "items": { "type": "object", "properties": { "ref": { "type": "string" }, "observed": { "type": "string" } }, "required": ["ref"] } },
+        "video": { "type": ["object", "null"], "properties": { "ref": { "type": "string" }, "duration_s": { "type": "number" } } },
+        "target_marketplaces": { "type": "array", "items": { "type": "string", "enum": ["ozon", "wildberries", "yandex_market", "aliexpress"] } }
+      }
+    },
+    "ru": {
+      "type": "object",
+      "required": ["title", "description", "bullets", "specs", "package_contents"],
+      "properties": {
+        "title": {
+          "type": "object",
+          "properties": {
+            "ozon": { "type": "string", "maxLength": 200 },
+            "wildberries": { "type": "string", "maxLength": 60 },
+            "yandex_market": { "type": "string", "maxLength": 150 },
+            "aliexpress": { "type": "string", "maxLength": 128 }
+          }
+        },
+        "description": { "type": "string", "maxLength": 6000 },
+        "description_wb": { "type": "string", "maxLength": 2000, "description": "Optional shortened version for Wildberries; if absent, description must itself be ≤ 2000" },
+        "bullets": { "type": "array", "minItems": 3, "maxItems": 8, "items": { "type": "string", "maxLength": 80 } },
+        "specs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "value"],
+            "properties": { "name": { "type": "string" }, "value": { "type": "string" }, "unit": { "type": ["string", "null"] } }
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "properties": {
+            "ozon": { "type": "object", "additionalProperties": { "type": "string" } },
+            "wildberries": { "type": "object", "additionalProperties": { "type": "string" } },
+            "yandex_market": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+        "package_contents": { "type": "array", "items": { "type": "string" } },
+        "infographic": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["slide", "headline"],
+            "properties": {
+              "slide": { "type": "integer" },
+              "headline": { "type": "string", "maxLength": 40 },
+              "subline": { "type": "string", "maxLength": 90 },
+              "image_ref": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "video": {
+          "type": ["object", "null"],
+          "properties": {
+            "script": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": { "time": { "type": "string" }, "visual": { "type": "string" }, "voiceover": { "type": "string" } }
+              }
+            },
+            "subtitles_srt": { "type": "string" }
+          }
+        },
+        "faq": { "type": "array", "items": { "type": "object", "required": ["q", "a"], "properties": { "q": { "type": "string" }, "a": { "type": "string" } } } }
+      }
+    },
+    "keywords": {
+      "type": "object",
+      "required": ["high", "mid", "low", "source"],
+      "properties": {
+        "high": { "type": "array", "items": { "type": "string" } },
+        "mid": { "type": "array", "items": { "type": "string" } },
+        "low": { "type": "array", "items": { "type": "string" } },
+        "negative": { "type": "array", "items": { "type": "object", "required": ["word", "reason"], "properties": { "word": { "type": "string" }, "reason": { "type": "string" } } } },
+        "hashtags": { "type": "array", "maxItems": 10, "items": { "type": "string", "pattern": "^#[a-zа-яё0-9_]+$" } },
+        "source": { "type": "string", "description": "\"llm-estimate\" or the name of the real search-data source" }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "required": ["category_guess", "tr_ts", "chestny_znak", "label_text", "warnings"],
+      "properties": {
+        "category_guess": { "type": "string" },
+        "tr_ts": { "type": "array", "items": { "type": "string" } },
+        "chestny_znak": { "type": ["boolean", "string"] },
+        "fsb_notification": { "type": ["boolean", "null"] },
+        "age_marking": { "type": ["string", "null"] },
+        "label_text": { "type": "string" },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "qa": {
+      "type": "object",
+      "properties": {
+        "missing_fields": { "type": "array", "items": { "type": "string" } },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "validator": { "type": ["object", "null"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "RU E-com Product Card"
+  short_description: "把中文产品资料变成 Ozon / WB / Яндекс Маркет 可上架的俄语卡片 + 关键词 + 合规检查"
+  default_prompt: "用 ru-ecom-product 技能处理这个产品：[粘贴名称、参数、介绍，附图片/视频]。目标平台：Ozon、Wildberries。输出 output.json 并跑校验。"
+policy:
+  allow_implicit_invocation: true
